@@ -1,35 +1,42 @@
-class GuppieSystem extends ParticleSystem {
-	static label = "🐟"; // Ignore the Glitch parse error
-	static desc = "Atom simulation w"; // Ignore the Glitch parse error
+/* globals Vector2D, Particle, ParticleSystem, p */
+
+/*
+ * Basic particles with an attraction force
+ */
+
+class RoboSystem extends ParticleSystem {
+	static label = "🤖"; // Ignore the Glitch parse error
+	static desc = "Robos animation"; // Ignore the Glitch parse error
+
 	constructor() {
 		// Make what particle, and how many?
 		// Try different numbers of particles
-		super(GuppieParticle, 10);
+		super(RoboParticle, 60);
+
+		this.flockCenter = new Vector2D();
+		this.flockVelocity = new Vector2D();
+	}
+
+	beforeMove(p, dt) {
+		// Calculate the flock's center and average direction
+		// Reset both
+		this.flockCenter.mult(0);
+		this.flockVelocity.mult(0);
+
+		// Add up the velocity and position
+		this.particles.forEach((pt) => {
+			this.flockCenter.add(pt.pos);
+			this.flockVelocity.add(pt.v);
+		});
+		// Divide by the number of boids to get the
+		// overall flock data
+		this.flockVelocity.div(this.particles.length);
+		this.flockCenter.div(this.particles.length);
 	}
 
 	draw(p) {
-		// How many tiles and how big are they?
-		let t = p.millis() * 0.001;
-		let count = 90;
-		let tileSize = p.width / count;
-		let noiseScale = 0.01;
+		p.background(0, 0, 0, 1);
 
-		for (let i = 0; i < count; i++) {
-			for (let j = 0; j < count; j++) {
-				let x = tileSize * i;
-				let y = tileSize * j;
-
-				let hue = 197;
-				// let colorNoise = 20 * p.noise
-				let noise = 500 * p.noise(x * noiseScale, y * noiseScale, t / 3);
-
-				// Wrap the hue around 306 degrees, P5 can't handle >360 hues
-				p.noStroke();
-				p.fill(hue, 100, noise / 6 + 25, 1);
-
-				p.rect(x, y, tileSize * 0.9);
-			}
-		}
 		// The "super-class" draws the particles
 		super.draw(p);
 	}
@@ -39,7 +46,7 @@ class GuppieSystem extends ParticleSystem {
 //=========================================================================
 //=========================================================================
 
-class GuppieParticle extends Particle {
+class RoboParticle extends Particle {
 	constructor(ps, index) {
 		// ps: the particle system this particle belongs to
 		// index: of all the particles in that system, this one's index
@@ -59,7 +66,6 @@ class GuppieParticle extends Particle {
 		// A few forces to keep the boid interesting
 		this.propulsionForce = new Vector2D();
 		this.attractionForce = new Vector2D();
-		this.trail = [];
 	}
 
 	calculateForces(p, dt) {
@@ -129,7 +135,7 @@ class GuppieParticle extends Particle {
 		// Try different tunings
 		this.separationForce.mult(0.8);
 		this.cohesionForce.mult(0);
-		this.alignmentForce.mult(0);
+		this.alignmentForce.mult(0.6);
 
 		this.f.add(this.separationForce);
 		this.f.add(this.alignmentForce);
@@ -151,48 +157,23 @@ class GuppieParticle extends Particle {
 	draw(p, drawDebug = false) {
 		let t = p.millis() * 0.001;
 
-		let tempT = Math.ceil(t);
-		if (tempT % 5 == 0) {
-			this.trail.push({ location: this.pos.clone(), birthTime: t });
-			this.trail = this.trail.slice(-20);
-		}
-
-		let opacity = ((t % 5) * 20) / 100;
-		opacity = Math.sin(opacity * Math.PI) * 2;
-
-		p.strokeWeight(3);
-		p.stroke(0, 0, 0, 0.1);
-		p.fill(160, 75, 80, opacity);
+		p.noStroke();
+		p.fill(100);
 		p.push();
 		p.translate(...this.pos);
-		p.rotate(-this.angle);
+		p.rotate(this.angle);
 
-		p.beginShape();
-		p.curveVertex(this.radius, 0);
-		p.curveVertex(this.radius, 0);
-		p.curveVertex(-this.radius, -this.radius);
-		p.curveVertex(-this.radius * 2, 0);
-		p.curveVertex(-this.radius, this.radius);
-		p.curveVertex(-this.radius, this.radius);
-		p.endShape(p.CLOSE);
+		p.text("🤖", 0 + p.noise(1), 0 + p.random(2));
 
-		p.fill(0);
-		p.circle(-this.radius, -this.radius, 2);
-		p.circle(-this.radius, this.radius, 2);
+		//     p.beginShape();
+		//     p.vertex(this.radius, 0);
+		//     p.vertex(-this.radius, -this.radius);
+		//     p.vertex(0, 0);
+		//     p.vertex(-this.radius, this.radius);
+
+		//     p.endShape();
 
 		p.pop();
-
-		p.noFill();
-		p.strokeWeight(1);
-		p.stroke(100, 100, 100, 0.25);
-		for (const ripple of this.trail) {
-			// console.log(3 - ripple.lifeSpanLeft);
-			p.circle(
-				ripple.location[0],
-				ripple.location[1],
-				(t - ripple.birthTime) * 25
-			);
-		}
 
 		if (drawDebug) {
 			p.fill(0);
